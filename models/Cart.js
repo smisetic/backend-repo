@@ -8,7 +8,8 @@ const Cart = sequelize.define('Cart', {
   lastUpdatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   qrCode: { type: DataTypes.TEXT, allowNull: true },
   isSavedCart: { type: DataTypes.BOOLEAN, defaultValue: false },
-  bestDiscountApplied: { type: DataTypes.FLOAT, defaultValue: 0 }
+  bestDiscountApplied: { type: DataTypes.FLOAT, defaultValue: 0 },
+  verifiedPrice: { type: DataTypes.FLOAT, defaultValue: 0 }
 });
 
 module.exports = Cart;
