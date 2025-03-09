@@ -1,0 +1,11 @@
+# Ignore dependencies folder
+node_modules/
+
+# Ignore environment variables (sensitive data)
+.env
+
+# Ignore system-specific files
+.DS_Store
+
+# Ignore log files
+npm-debug.log
