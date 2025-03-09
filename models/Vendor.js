@@ -3,6 +3,7 @@ const sequelize = require('../config/db');
 
 const Vendor = sequelize.define('Vendor', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  userId: { type: DataTypes.UUID, allowNull: false },
   name: { type: DataTypes.STRING, allowNull: false },
   description: { type: DataTypes.TEXT },
   location: { type: DataTypes.GEOGRAPHY('POINT'), allowNull: true },
