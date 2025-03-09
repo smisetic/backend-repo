@@ -4,6 +4,7 @@ const QRCode = require('qrcode');
 const twilio = require('twilio');
 const { Sequelize } = require('sequelize');
 const cron = require('node-cron');
+const winston = require('winston');
 
 // Add item to cart with stock validation
 exports.addItemToCart = async (req, res) => {
@@ -25,41 +26,70 @@ exports.addItemToCart = async (req, res) => {
 
     res.json(cart);
   } catch (error) {
+    winston.error(error.message);
     res.status(500).json({ error: 'Error updating cart', details: error.message });
   }
 };
 
-// Generate QR Code for cart retrieval
-exports.getCartQRCode = async (req, res) => {
+// Allow Users to Remove Items from Cart
+exports.removeItemFromCart = async (req, res) => {
   try {
-    const { cartId } = req.params;
-    const qrCode = await QRCode.toDataURL(cartId);
-    res.json({ qrCode });
+    const { userId, inventoryId } = req.body;
+    let cart = await Cart.findOne({ where: { userId } });
+    if (!cart) return res.status(404).json({ error: 'Cart not found' });
+
+    const inventoryItem = await Inventory.findByPk(inventoryId);
+    if (!inventoryItem) return res.status(404).json({ error: 'Item not found in inventory' });
+
+    cart.totalAmount -= inventoryItem.price;
+    await cart.save();
+
+    inventoryItem.stockCount += 1;
+    await inventoryItem.save();
+
+    res.json(cart);
   } catch (error) {
-    res.status(500).json({ error: 'Error generating QR Code' });
+    winston.error(error.message);
+    res.status(500).json({ error: 'Error removing item from cart', details: error.message });
   }
 };
 
-// Automatic Cart Cleanup (Removes carts inactive for 24 hours)
-cron.schedule('0 0 * * *', async () => {
-  const expirationTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  await Cart.destroy({ where: { lastUpdatedAt: { [Sequelize.Op.lt]: expirationTime } } });
-  console.log('Old carts cleaned up');
-});
-
-// Twilio SMS Notifications (utils/notifications.js)
-const accountSid = process.env.TWILIO_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const client = new twilio(accountSid, authToken);
-
-exports.sendSMS = async (to, message) => {
+// Coupon / Discount System
+exports.applyCoupon = async (req, res) => {
   try {
-    await client.messages.create({
-      body: message,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to
-    });
+    const { userId, couponCode } = req.body;
+    let cart = await Cart.findOne({ where: { userId } });
+    if (!cart) return res.status(404).json({ error: 'Cart not found' });
+
+    if (couponCode === 'DISCOUNT10') {
+      cart.totalAmount *= 0.9;
+    } else {
+      return res.status(400).json({ error: 'Invalid coupon code' });
+    }
+
+    await cart.save();
+    res.json(cart);
   } catch (error) {
-    console.error('Error sending SMS:', error.message);
+    winston.error(error.message);
+    res.status(500).json({ error: 'Error applying coupon', details: error.message });
+  }
+};
+
+// Store QR Code in Database
+exports.getCartQRCode = async (req, res) => {
+  try {
+    const { cartId } = req.params;
+    let cart = await Cart.findByPk(cartId);
+    if (!cart) return res.status(404).json({ error: 'Cart not found' });
+
+    if (!cart.qrCode) {
+      cart.qrCode = await QRCode.toDataURL(cartId);
+      await cart.save();
+    }
+
+    res.json({ qrCode: cart.qrCode });
+  } catch (error) {
+    winston.error(error.message);
+    res.status(500).json({ error: 'Error generating QR Code' });
   }
 };
