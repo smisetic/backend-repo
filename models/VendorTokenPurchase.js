@@ -6,7 +6,8 @@ const VendorTokenPurchase = sequelize.define('VendorTokenPurchase', {
   vendorId: { type: DataTypes.UUID, allowNull: false },
   amount: { type: DataTypes.FLOAT, allowNull: false },
   tokensPurchased: { type: DataTypes.INTEGER, allowNull: false },
-  stripeTransactionId: { type: DataTypes.STRING, allowNull: false }
+  stripeTransactionId: { type: DataTypes.STRING, unique: true, allowNull: false },
+  status: { type: DataTypes.ENUM('pending', 'completed', 'failed', 'refunded'), defaultValue: 'pending' }
 });
 
 module.exports = VendorTokenPurchase;
