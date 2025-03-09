@@ -6,7 +6,9 @@ const Cart = sequelize.define('Cart', {
   userId: { type: DataTypes.UUID, allowNull: false },
   totalAmount: { type: DataTypes.FLOAT, defaultValue: 0 },
   lastUpdatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  qrCode: { type: DataTypes.TEXT, allowNull: true }
+  qrCode: { type: DataTypes.TEXT, allowNull: true },
+  isSavedCart: { type: DataTypes.BOOLEAN, defaultValue: false },
+  bestDiscountApplied: { type: DataTypes.FLOAT, defaultValue: 0 }
 });
 
 module.exports = Cart;

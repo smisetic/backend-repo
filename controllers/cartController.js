@@ -1,95 +1,61 @@
 const Cart = require('../models/Cart');
 const Inventory = require('../models/Inventory');
 const QRCode = require('qrcode');
-const twilio = require('twilio');
-const { Sequelize } = require('sequelize');
-const cron = require('node-cron');
 const winston = require('winston');
+const nodemailer = require('nodemailer');
 
-// Add item to cart with stock validation
-exports.addItemToCart = async (req, res) => {
+// Auto-Apply Best Discount
+exports.applyBestDiscount = async (req, res) => {
   try {
-    const { userId, inventoryId, quantity } = req.body;
-    const inventoryItem = await Inventory.findByPk(inventoryId);
-    if (!inventoryItem || inventoryItem.stockCount < quantity) {
-      return res.status(400).json({ error: 'Item not available' });
-    }
-
-    let cart = await Cart.findOne({ where: { userId } });
-    if (!cart) cart = await Cart.create({ userId });
-
-    cart.totalAmount += inventoryItem.price * quantity;
-    await cart.save();
-
-    inventoryItem.stockCount -= quantity;
-    await inventoryItem.save();
-
-    res.json(cart);
-  } catch (error) {
-    winston.error(error.message);
-    res.status(500).json({ error: 'Error updating cart', details: error.message });
-  }
-};
-
-// Allow Users to Remove Items from Cart
-exports.removeItemFromCart = async (req, res) => {
-  try {
-    const { userId, inventoryId } = req.body;
+    const { userId } = req.body;
     let cart = await Cart.findOne({ where: { userId } });
     if (!cart) return res.status(404).json({ error: 'Cart not found' });
 
-    const inventoryItem = await Inventory.findByPk(inventoryId);
-    if (!inventoryItem) return res.status(404).json({ error: 'Item not found in inventory' });
-
-    cart.totalAmount -= inventoryItem.price;
+    cart.bestDiscountApplied = cart.totalAmount * 0.10; // Auto-apply 10% discount
+    cart.totalAmount -= cart.bestDiscountApplied;
     await cart.save();
-
-    inventoryItem.stockCount += 1;
-    await inventoryItem.save();
 
     res.json(cart);
   } catch (error) {
     winston.error(error.message);
-    res.status(500).json({ error: 'Error removing item from cart', details: error.message });
+    res.status(500).json({ error: 'Error applying best discount', details: error.message });
   }
 };
 
-// Coupon / Discount System
-exports.applyCoupon = async (req, res) => {
+// Abandoned Cart Reminder via Email
+exports.sendCartReminder = async (req, res) => {
   try {
-    const { userId, couponCode } = req.body;
-    let cart = await Cart.findOne({ where: { userId } });
-    if (!cart) return res.status(404).json({ error: 'Cart not found' });
+    const { userEmail } = req.body;
+    let cart = await Cart.findOne({ where: { userEmail, isSavedCart: true } });
+    if (!cart) return res.status(404).json({ error: 'No saved cart found' });
 
-    if (couponCode === 'DISCOUNT10') {
-      cart.totalAmount *= 0.9;
-    } else {
-      return res.status(400).json({ error: 'Invalid coupon code' });
-    }
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    });
 
-    await cart.save();
-    res.json(cart);
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: userEmail,
+      subject: 'Your cart is waiting!',
+      text: 'Come back and complete your order before items run out!'
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.json({ message: 'Cart reminder email sent' });
   } catch (error) {
     winston.error(error.message);
-    res.status(500).json({ error: 'Error applying coupon', details: error.message });
+    res.status(500).json({ error: 'Error sending cart reminder', details: error.message });
   }
 };
 
-// Store QR Code in Database
-exports.getCartQRCode = async (req, res) => {
+// Generate Shareable Cart Link
+exports.getCartShareableLink = async (req, res) => {
   try {
     const { cartId } = req.params;
-    let cart = await Cart.findByPk(cartId);
-    if (!cart) return res.status(404).json({ error: 'Cart not found' });
-
-    if (!cart.qrCode) {
-      cart.qrCode = await QRCode.toDataURL(cartId);
-      await cart.save();
-    }
-
-    res.json({ qrCode: cart.qrCode });
+    res.json({ shareableLink: `${process.env.BASE_URL}/cart/${cartId}` });
   } catch (error) {
     winston.error(error.message);
-    res.status(500).json({ error: 'Error generating QR Code' });
+    res.status(500).json({ error: 'Error generating shareable cart link' });
   }
 };
