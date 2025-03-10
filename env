@@ -1,3 +1,6 @@
-DATABASE_URL=postgres://username:password@localhost:5432/yourdatabase
-JWT_SECRET=your_jwt_secret
+# JWT Secret Key (Just a placeholder for now)
+JWT_SECRET=mytestsecretkey
+
+
+# Server Port
 PORT=5000

@@ -5,22 +5,54 @@ const morgan = require('morgan');
 const sequelize = require('./config/db');
 const routes = require('./routes');
 require('dotenv').config();
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY); // Stripe API
+const winston = require('winston');
 
 const app = express();
 
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use(morgan('dev'));
 
+// Routes
 app.use('/api', routes);
 
-// Centralized Error Handling Middleware
+// Mock Payment API for Testing
+app.post('/api/payment/charge', (req, res) => {
+  if (process.env.NODE_ENV === 'test') {
+    return res.status(200).json({ message: '✅ Mock Payment Successful' });
+  }
+  
+  // Actual Stripe Payment Logic
+  stripe.charges.create({
+    amount: req.body.amount,
+    currency: req.body.currency,
+    source: req.body.source
+  })
+  .then(charge => res.status(200).json({ message: 'Payment successful', charge }))
+  .catch(error => {
+    winston.error(error);
+    res.status(500).json({ error: 'Payment failed' });
+  });
+});
+
+// Centralized Error Handling
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  winston.error(err.stack);
   res.status(err.status || 500).json({ error: err.message || "Internal Server Error" });
 });
 
-sequelize.sync({ alter: true }).then(() => {
-  const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-});
+// Start the server only if NOT in test mode
+const PORT = process.env.PORT || 5000;
+let server;
+
+if (process.env.NODE_ENV !== 'test') {
+  sequelize.sync({ alter: true }).then(() => {
+    server = app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+  });
+}
+
+// Export app for Jest testing
+module.exports = app;
+
