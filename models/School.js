@@ -1,11 +1,11 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
-const TokenAllocationFund = sequelize.define('TokenAllocationFund', {
+const School = sequelize.define('School', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+  name: { type: DataTypes.STRING, allowNull: false },
   county: { type: DataTypes.STRING, allowNull: false },
-  amount: { type: DataTypes.FLOAT, allowNull: false },
-  source: { type: DataTypes.STRING, defaultValue: 'vendor_token' }
+  lowIncome: { type: DataTypes.BOOLEAN, defaultValue: false } // New flag for low-income schools
 });
 
-module.exports = TokenAllocationFund;
+module.exports = School;
