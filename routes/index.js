@@ -9,5 +9,8 @@ router.get('/health', (req, res) => {
 router.use('/auth', require('./auth'));
 router.use('/vendor', require('./vendor'));
 router.use('/payment', require('./payment'));
+router.use('/orders', require('./order'));
+router.use('/cart', require('./cart'));
+router.use('/inventory', require('./inventory'));
 
 module.exports = router;
