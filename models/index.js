@@ -1,10 +1,25 @@
-const User = require('./User');
-const Vendor = require('./Vendor');
-const Inventory = require('./Inventory');
+// models/index.js
+const fs = require('fs');
+const path = require('path');
+const Sequelize = require('sequelize');
+const sequelize = require('../config/db');
+const db = {};
 
-User.hasOne(Vendor, { foreignKey: 'userId' });
-Vendor.belongsTo(User, { foreignKey: 'userId' });
-Vendor.hasMany(Inventory, { foreignKey: 'vendorId' });
-Inventory.belongsTo(Vendor, { foreignKey: 'vendorId' });
+fs.readdirSync(__dirname)
+  .filter(file => file !== 'index.js' && file.endsWith('.js'))
+  .forEach(file => {
+    const modelFactory = require(path.join(__dirname, file));
+    const model = modelFactory(sequelize, Sequelize.DataTypes);
+    db[model.name] = model;
+  });
 
-module.exports = { User, Vendor, Inventory };
+Object.keys(db).forEach(modelName => {
+  if (db[modelName].associate) {
+    db[modelName].associate(db);
+  }
+});
+
+db.sequelize = sequelize;
+db.Sequelize = Sequelize;
+
+module.exports = db;

@@ -1,20 +1,23 @@
+// models/Order.js
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db');
-const User = require('../models/User');
-const Vendor = require('../models/Vendor');
 
-const Order = sequelize.define('Order', {
-  id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
-  userId: { type: DataTypes.UUID, allowNull: false },
-  vendorId: { type: DataTypes.UUID, allowNull: false },
-  totalAmount: { type: DataTypes.FLOAT, allowNull: false },
-  status: { 
-    type: DataTypes.ENUM('pending', 'confirmed', 'shipped', 'delivered', 'canceled'),
-    defaultValue: 'pending' 
-  }
-});
+module.exports = (sequelize, DataTypes) => {
+  const User = require('./User')(sequelize, DataTypes); // Ensure dependencies are initialized
+  const Vendor = require('./Vendor')(sequelize, DataTypes);
 
-Order.belongsTo(User, { foreignKey: 'userId' });
-Order.belongsTo(Vendor, { foreignKey: 'vendorId' });
+  const Order = sequelize.define('Order', {
+    id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
+    userId: { type: DataTypes.UUID, allowNull: false },
+    vendorId: { type: DataTypes.UUID, allowNull: false },
+    totalAmount: { type: DataTypes.FLOAT, allowNull: false },
+    status: { 
+      type: DataTypes.ENUM('pending', 'confirmed', 'shipped', 'delivered', 'canceled'),
+      defaultValue: 'pending' 
+    }
+  });
 
-module.exports = Order;
+  Order.belongsTo(User, { foreignKey: 'userId' });
+  Order.belongsTo(Vendor, { foreignKey: 'vendorId' });
+
+  return Order;
+};

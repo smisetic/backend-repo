@@ -1,14 +1,15 @@
-const Cart = require('../models/Cart');
-const Inventory = require('../models/Inventory');
+// controllers/cartController.js
+const db = require('../models');
+const Cart = db.Cart;
+const Inventory = db.Inventory;
 const QRCode = require('qrcode');
 const winston = require('winston');
 const redis = require('redis');
 const rateLimit = require('express-rate-limit');
-const io = require('../server').io;
+const { io } = require('../server');
 
 const redisClient = redis.createClient();
 
-// Verify Cart Prices at Checkout (Prevent Cart Tampering)
 exports.verifyCartPrices = async (req, res) => {
   try {
     const { userId } = req.body;
@@ -32,17 +33,27 @@ exports.verifyCartPrices = async (req, res) => {
   }
 };
 
+// controllers/cartController.js (partial update)
 exports.addItemToCart = async (req, res) => {
   try {
     const { userId, inventoryId, quantity } = req.body;
+    const inventory = await Inventory.findByPk(inventoryId);
+    if (!inventory) return res.status(404).json({ error: 'Inventory not found' });
 
     let cartItem = await Cart.findOne({ where: { userId, inventoryId } });
+    const totalAmount = inventory.price * quantity;
 
     if (cartItem) {
       cartItem.quantity += quantity;
+      cartItem.totalAmount += totalAmount;
       await cartItem.save();
     } else {
-      cartItem = await Cart.create({ userId, inventoryId, quantity });
+      cartItem = await Cart.create({ 
+        userId, 
+        inventoryId, 
+        quantity, 
+        totalAmount 
+      });
     }
 
     res.status(201).json(cartItem);
@@ -68,14 +79,13 @@ exports.getCartQRCode = async (req, res) => {
     res.status(500).json({ error: 'Failed to generate QR Code', details: error.message });
   }
 };
-// Rate-Limiting for Cart API (Prevent Bots)
+
 const cartLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
-  message: 'Too many requests, please try again later'
+  message: 'Too many requests, please try again later',
 });
 
-// WebSockets for Real-Time Cart Updates
 exports.updateCartLive = async (cartId) => {
   try {
     const cart = await Cart.findByPk(cartId);
@@ -86,3 +96,5 @@ exports.updateCartLive = async (cartId) => {
     winston.error('Error updating cart live:', error.message);
   }
 };
+
+module.exports = exports;
