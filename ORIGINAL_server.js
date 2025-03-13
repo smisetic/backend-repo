@@ -51,8 +51,6 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({ error: err.message || "Internal Server Error" });
 });
 
-sequelize.sync({ force: true }) // WARNING: Reset DB in testing!
-
 // Start the server only if NOT in test mode
 const PORT = process.env.PORT || 5000;
 let server;

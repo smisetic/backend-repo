@@ -14,4 +14,3 @@ router.use('/cart', require('./cart'));
 router.use('/inventory', require('./inventory'));
 
 module.exports = router;
-router.use('/payments', require('./payment'));

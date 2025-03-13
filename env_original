@@ -1,0 +1,6 @@
+# JWT Secret Key (Just a placeholder for now)
+JWT_SECRET=mytestsecretkey
+
+
+# Server Port
+PORT=5000

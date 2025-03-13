@@ -32,6 +32,42 @@ exports.verifyCartPrices = async (req, res) => {
   }
 };
 
+exports.addItemToCart = async (req, res) => {
+  try {
+    const { userId, inventoryId, quantity } = req.body;
+
+    let cartItem = await Cart.findOne({ where: { userId, inventoryId } });
+
+    if (cartItem) {
+      cartItem.quantity += quantity;
+      await cartItem.save();
+    } else {
+      cartItem = await Cart.create({ userId, inventoryId, quantity });
+    }
+
+    res.status(201).json(cartItem);
+  } catch (error) {
+    winston.error(error.message);
+    res.status(500).json({ error: 'Failed to add item to cart', details: error.message });
+  }
+};
+
+exports.getCartQRCode = async (req, res) => {
+  try {
+    const { cartId } = req.params;
+    const cart = await Cart.findByPk(cartId);
+    
+    if (!cart) {
+      return res.status(404).json({ error: 'Cart not found' });
+    }
+
+    const qrCode = await QRCode.toDataURL(JSON.stringify(cart));
+    res.json({ qrCode });
+  } catch (error) {
+    winston.error('Error generating QR Code:', error.message);
+    res.status(500).json({ error: 'Failed to generate QR Code', details: error.message });
+  }
+};
 // Rate-Limiting for Cart API (Prevent Bots)
 const cartLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
